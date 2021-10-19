@@ -1,0 +1,13 @@
+FIpairs:
+- EFU_HK_name: /Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_51/FLOATS_EFU_HK.csv
+  EFU_file_name: /Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_51/FLOATS_EFU_TSEN.csv
+  FLOATS_log_file: /Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_51/FLOATS_Log.txt
+  FlightID: ST2_C1_51_TTL5
+  HK_file_name: /Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_51/FLOATS_HK_Master.csv
+  flight_or_test: AIT
+  ftr_file_name: /Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_51/FLOATS_Raman_Master.csv
+  instrument: FLOATS
+  singlescan_dir: /Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_51/Single_FTR
+ccmz_pass: mypassword
+ccmz_user: myusername
+local_target_dir: /Users/sdavis/sd-data/projects/strateole2/C1/CCMZ_Mirror
