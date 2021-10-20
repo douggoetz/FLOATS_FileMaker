@@ -83,7 +83,7 @@ def loop_over_flights_and_instruments(config):
                 
                     InputFile = f
                     fname = os.path.split(f)
-                    ScanFile = singlescan_dir + fname[1] + '.csv'  
+                    ScanFile = os.path.join(singlescan_dir,fname[1],'.csv')
                     fname = os.path.split(f)
                     XMLmess = readXMLTHeader(InputFile, 1,FLOATS_log_file,HK_file_name) 
                     filetype = XMLmess[0]
@@ -115,7 +115,7 @@ def loop_over_flights_and_instruments(config):
 
                     InputFile = f
                     fname = os.path.split(f)
-                    ScanFile = singlescan_dir + fname[1] + '.csv'  
+                    ScanFile = os.path.join(singlescan_dir,fname[1],'.csv')
                     XMLmess = readXMLTHeader(InputFile, 2,FLOATS_log_file,HK_file_name) 
                     filetype = XMLmess[0]
                     
