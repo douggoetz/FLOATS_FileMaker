@@ -437,7 +437,7 @@ def parseEFUHKDatatoCSV(binData, OutFile):
     ###note that the csv.sniffer raises an error if the csv file is created but blank   
     
     # open CSV file to make sure the header exists
-    file_exists = exists(EFU_HK_name)
+    file_exists = exists(OutFile)
     headerexists = 0
 
     if file_exists: 
