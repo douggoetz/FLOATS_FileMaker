@@ -34,7 +34,7 @@ import getopt
 tm_or_tc='TM'
 raw_or_processed='Processed'
 
-def loop_over_flights_and_instruments(config):
+def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
 
     """
     Get all data from CCMz for the input list of flights/instruments
@@ -63,33 +63,37 @@ def loop_over_flights_and_instruments(config):
 
         ccmz_folder=os.path.join(flight,instrument,flight_or_test,tm_or_tc,raw_or_processed)
 
-
-        #mirror_ccmz_folder(ccmz_folder)
-
-
-        new_files = mirror_ccmz_folder(instrument,ccmz_folder,local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True)
-
+        if syncCCMz:
+            new_files = mirror_ccmz_folder(instrument,ccmz_folder,local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True)
+        else:
+            new_files=[]
+    
+        #If we want to process all of the files (not just the newest ones that were downloaded)
+        if processall:
+            print('Attempting to process all dat.gz files in ' + os.path.join(local_target_dir,ccmz_folder,'*.dat.gz'))
+            new_files=glob.glob(os.path.join(local_target_dir,ccmz_folder,'*.dat.gz')) 
+        
+        print(new_files)
 
         if new_files != None:
             
 
             #for f in gzfiles:
             for f in new_files:
-    
                 simmatch = (re.search('.ready_tm', f))  ## use with OBC simulator unpacked data
                 gzmatch = (re.search('.gz', f))
                 
                 if(simmatch): #if it is an unpacked binary file from the simulator
-                
+                    print('parsing unpacked binary: ' + f)
                     InputFile = f
                     fname = os.path.split(f)
-                    ScanFile = os.path.join(singlescan_dir,fname[1],'.csv')
+                    ScanFile = os.path.join(singlescan_dir,fname[1]+'.csv')
                     fname = os.path.split(f)
                     XMLmess = readXMLTHeader(InputFile, 1,FLOATS_log_file,HK_file_name) 
                     filetype = XMLmess[0]
                     
                     with open(InputFile, "rb") as binary_file:
-
+                        
                         #find binary section location in TM file
                         bindata = binary_file.read()
                         start = bindata.find(b'START') + 5  # Find the 'START' string that mark the start of the binary section
@@ -112,10 +116,10 @@ def loop_over_flights_and_instruments(config):
                             
 
                 elif(gzmatch): #if it is an unpacked binary file from the simulator
-
+                    print('parsing gz file:' + f)
                     InputFile = f
                     fname = os.path.split(f)
-                    ScanFile = os.path.join(singlescan_dir,fname[1],'.csv')
+                    ScanFile = os.path.join(singlescan_dir,fname[1]+'.csv')
                     XMLmess = readXMLTHeader(InputFile, 2,FLOATS_log_file,HK_file_name) 
                     filetype = XMLmess[0]
                     
@@ -737,10 +741,11 @@ def main(argv):
       elif opt in ("-c", "--configfile"):
          configfile = arg
 
+  print('Running with configuration file ' + configfile)
   try:
       with open(configfile, "r") as yamlfile:
           config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-      loop_over_flights_and_instruments(config)
+      loop_over_flights_and_instruments(config,processall=True)
   except OSError:
       print('cannot open',configfile)
 if __name__ == "__main__":
