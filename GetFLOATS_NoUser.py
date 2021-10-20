@@ -481,12 +481,12 @@ def parseTSENDatatoCSV(binData, OutFile):
     ###note that the csv.sniffer raises an error if the csv file is created but blank   
     
     # open CSV file to make sure the header exists
-    file_exists = exists(EFU_file_name)
+    file_exists = exists(OutFile)
     headerexists = 0
 
     if file_exists: 
         sniff = csv.Sniffer() 
-        headerexists = sniff.has_header(open(EFU_file_name).read(2))   
+        headerexists = sniff.has_header(open(OutFile).read(2))   
     
     with open(OutFile, mode='a+') as out_file:
         file_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
