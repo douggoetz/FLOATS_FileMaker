@@ -25,6 +25,7 @@ from os.path import exists
 import yaml
 import sys
 import getopt
+import pandas as pd
 
 #from EFU_HKfileprocessor import *
 
@@ -145,6 +146,14 @@ def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
                         
                         elif filetype == 22:
                             parseTSENDatatoCSV(binPacket, EFU_file_name)
+
+            #Convert the csv files to html files that can be uploaded to the strat2.org webpage   
+            for csvfile in [EFU_HK_name, EFU_file_name,FLOATS_log_file, HK_file_name ]:
+                print('Converting csv file to html: ' + csvfile)
+                df = pd.read_csv(csvfile)
+                #For the html table, re-order so that the most recent event is first
+                df = df.iloc[::-1]
+                df.to_html( open(os.path.splitext(csvfile)[0]+'.html', 'w') )
 
 def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True):
 
@@ -745,7 +754,7 @@ def main(argv):
   try:
       with open(configfile, "r") as yamlfile:
           config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-      loop_over_flights_and_instruments(config,processall=False)
+      loop_over_flights_and_instruments(config,processall=True)
   except OSError:
       print('cannot open',configfile)
 if __name__ == "__main__":
