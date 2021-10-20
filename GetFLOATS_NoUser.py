@@ -78,6 +78,12 @@ def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
 
         if new_files != None:
             
+            # If we are updating the files we need to clobber all of the csv because the routines below only append to the files
+            os.remove(EFU_HK_name)
+            os.remove(EFU_file_name)
+            os.remove(FLOATS_log_file)
+            os.remove(HK_file_name)
+            os.remove(ftr_file_name)
 
             #for f in gzfiles:
             for f in new_files:
@@ -147,13 +153,23 @@ def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
                         elif filetype == 22:
                             parseTSENDatatoCSV(binPacket, EFU_file_name)
 
-            #Convert the csv files to html files that can be uploaded to the strat2.org webpage   
-            for csvfile in [EFU_HK_name, EFU_file_name,FLOATS_log_file, HK_file_name ]:
-                print('Converting csv file to html: ' + csvfile)
-                df = pd.read_csv(csvfile)
-                #For the html table, re-order so that the most recent event is first
-                df = df.iloc[::-1]
-                df.to_html( open(os.path.splitext(csvfile)[0]+'.html', 'w') )
+            #Convert the csv files to html files that can be uploaded to the strat2.org webpage               
+            df = pd.read_csv(EFU_HK_name,skiprows=1)
+            sorted_df = df.sort_values(by=['Time POSIX'],ascending=False)
+            sorted_df.to_html( open(os.path.splitext(EFU_HK_name)[0]+'.html', 'w') )
+
+            df = pd.read_csv(EFU_file_name,skiprows=1)
+            sorted_df = df.sort_values(by=['Time POSIX'],ascending=False)
+            sorted_df.to_html( open(os.path.splitext(EFU_file_name)[0]+'.html', 'w') )
+
+            df = pd.read_csv(HK_file_name)
+            sorted_df = df.sort_values(by=['Time UNIX'],ascending=False)
+            sorted_df.to_html( open(os.path.splitext(HK_file_name)[0]+'.html', 'w') )
+
+            # floats_raman_master didn't look good when converted to html, so im commenting out for now
+            # df = pd.read_csv(ftr_file_name,header=[0,1,2])
+            # sorted_df = df.sort_values(df.columns[0],ascending=False)
+            # sorted_df.to_html( open(os.path.splitext(ftr_file_name)[0]+'.html', 'w') )            
 
 def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True):
 
