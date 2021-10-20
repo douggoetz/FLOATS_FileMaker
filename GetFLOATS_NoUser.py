@@ -29,7 +29,6 @@ import pandas as pd
 
 #from EFU_HKfileprocessor import *
 
-#gzfiles = sorted(os.listdir(default_local_target_dir))
 
 #These are constants indicating the type of data files to sync from CCMz
 tm_or_tc='TM'
