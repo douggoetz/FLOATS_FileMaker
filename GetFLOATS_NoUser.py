@@ -22,131 +22,127 @@ from datetime import datetime
 from numpy import log
 from array import *
 from os.path import exists
+import yaml
+import sys
+import getopt
 
 #from EFU_HKfileprocessor import *
 
-#File names and directories
-default_local_target_dir="CCMZ_Mirror/" # directory where to store mirrored data on your local machine
-FLOATS_csv_dir = "FLOATS_C1_51/" # dir where to put processesed csv files 
-Tempfile_dir = FLOATS_csv_dir+"/Recent_Download/"
-singlescan_dir = FLOATS_csv_dir+"Single_FTR/"
-FLOATS_log_file = FLOATS_csv_dir+"FLOATS_Log.txt" #file to save log of XML messages
-ftr_file_name = FLOATS_csv_dir+"FLOATS_Raman_Master.csv"
-HK_file_name = FLOATS_csv_dir+"FLOATS_HK_Master.csv"
-EFU_file_name = FLOATS_csv_dir+"FLOATS_EFU_TSEN.csv"
-EFU_HK_name = FLOATS_csv_dir+"FLOATS_EFU_HK.csv"
+#gzfiles = sorted(os.listdir(default_local_target_dir))
 
-gzfiles = sorted(os.listdir(default_local_target_dir))
-
-#CCMz parameters
-ccmz_url="sshstr2.ipsl.polytechnique.fr" # CCMz URL from where to download data
-ccmz_user="xxxxxxx" # Your login on the CCMz
-ccmz_pass="xxxxxxxxx" # Your password on the CCMz
-
-# ID of flights in which I'm interested in
-my_flights=['ST2_C1_51_TTL5']#,'ST2_C0_05_TTL2'] # Adapt according to your needs
-
-# ID of my instrument
-my_instruments=['FLOATS'] # Adapt according to your needs
-flight_or_test='AIT'
+#These are constants indicating the type of data files to sync from CCMz
 tm_or_tc='TM'
 raw_or_processed='Processed'
 
-
-def loop_over_flights_and_instruments():
+def loop_over_flights_and_instruments(config):
 
     """
     Get all data from CCMz for the input list of flights/instruments
     """
 
-    for flight in my_flights:
+    fipairlist = config['FIpairs']
+    ccmz_user = config['ccmz_user']
+    ccmz_pass = config['ccmz_pass']
+
+    #This is the local direcdtory that we are mirroring from the CCMz    
+    local_target_dir = config['local_target_dir']
+
+    #This is a list of flight/instrument pairs. Each element of this list is a dictionary containing info such as the instrument, flight ID, and output file names
+    for fipair in fipairlist:
+
+        #parse the configuration for this flight/instrument pair
+        flight = fipair['FlightID']
+        instrument = fipair['instrument']
+        flight_or_test = fipair['flight_or_test']
+        EFU_HK_name = fipair['EFU_HK_name']
+        EFU_file_name = fipair['EFU_file_name']
+        FLOATS_log_file = fipair['FLOATS_log_file']
+        HK_file_name = fipair['HK_file_name']
+        singlescan_dir  = fipair['singlescan_dir']
+        ftr_file_name = fipair['ftr_file_name']
+
+        ccmz_folder=os.path.join(flight,instrument,flight_or_test,tm_or_tc,raw_or_processed)
 
 
-        for instrument in my_instruments:
+        #mirror_ccmz_folder(ccmz_folder)
 
 
-            ccmz_folder=os.path.join(flight,instrument,flight_or_test,tm_or_tc,raw_or_processed)
+        new_files = mirror_ccmz_folder(instrument,ccmz_folder,local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True)
 
 
-            #mirror_ccmz_folder(ccmz_folder)
+        if new_files != None:
+            
 
-
-            new_files = mirror_ccmz_folder(instrument,ccmz_folder, show_individual_file=True)
-
-
-            if new_files != None:
+            #for f in gzfiles:
+            for f in new_files:
+    
+                simmatch = (re.search('.ready_tm', f))  ## use with OBC simulator unpacked data
+                gzmatch = (re.search('.gz', f))
                 
+                if(simmatch): #if it is an unpacked binary file from the simulator
+                
+                    InputFile = f
+                    fname = os.path.split(f)
+                    ScanFile = singlescan_dir + fname[1] + '.csv'  
+                    fname = os.path.split(f)
+                    XMLmess = readXMLTHeader(InputFile, 1,FLOATS_log_file,HK_file_name) 
+                    filetype = XMLmess[0]
+                    
+                    with open(InputFile, "rb") as binary_file:
 
-                #for f in gzfiles:
-                for f in new_files:
-        
-                    simmatch = (re.search('.ready_tm', f))  ## use with OBC simulator unpacked data
-                    gzmatch = (re.search('.gz', f))
-                    
-                    if(simmatch): #if it is an unpacked binary file from the simulator
-                    
-                        InputFile = f
-                        fname = os.path.split(f)
-                        ScanFile = singlescan_dir + fname[1] + '.csv'  
-                        fname = os.path.split(f)
-                        XMLmess = readXMLTHeader(InputFile, 1,FLOATS_log_file,HK_file_name) 
-                        filetype = XMLmess[0]
+                        #find binary section location in TM file
+                        bindata = binary_file.read()
+                        start = bindata.find(b'START') + 5  # Find the 'START' string that mark the start of the binary section
+                        end = bindata.find(b'END') # Find the 'END' string
+                        binPacket = (bindata[start:end-2]) # make a buffer containing only the binary section
+
                         
-                        with open(InputFile, "rb") as binary_file:
-
-                            #find binary section location in TM file
-                            bindata = binary_file.read()
-                            start = bindata.find(b'START') + 5  # Find the 'START' string that mark the start of the binary section
-                            end = bindata.find(b'END') # Find the 'END' string
-                            binPacket = (bindata[start:end-2]) # make a buffer containing only the binary section
-
+                        ## switch case to parse TM based on filetype
+                        if filetype == 44:
+                            parseFTRDatatoMasterCSV(binPacket,XMLmess,ftr_file_name)
+                            parseSingleScanFTR(binPacket, XMLmess, ScanFile)
                             
-                            ## switch case to parse TM based on filetype
-                            if filetype == 44:
-                                parseFTRDatatoMasterCSV(binPacket,XMLmess,ftr_file_name)
-                                parseSingleScanFTR(binPacket, XMLmess, ScanFile)
-                                
-                    
-                            elif filetype == 33:
-                                parseEFUHKDatatoCSV(binPacket, EFU_HK_name)
-                                
+                
+                        elif filetype == 33:
+                            parseEFUHKDatatoCSV(binPacket, EFU_HK_name)
                             
-                            elif filetype == 22:
-                                parseTSENDatatoCSV(binPacket, EFU_file_name)
-                                
-
-                    elif(gzmatch): #if it is an unpacked binary file from the simulator
-
-                        InputFile = f
-                        fname = os.path.split(f)
-                        ScanFile = singlescan_dir + fname[1] + '.csv'  
-                        XMLmess = readXMLTHeader(InputFile, 2,FLOATS_log_file,HK_file_name) 
-                        filetype = XMLmess[0]
                         
-
-                        with gzip.open(InputFile, "rb") as binary_file:
-
-                            #find binary section location in TM file
-                            bindata = binary_file.read()
-                            start = bindata.find(b'START') + 5  # Find the 'START' string that mark the start of the binary section
-                            end = bindata.find(b'END') # Find the 'END' string
-                            binPacket = (bindata[start:end-2]) # make a buffer containing only the binary section
-
+                        elif filetype == 22:
+                            parseTSENDatatoCSV(binPacket, EFU_file_name)
                             
-                            ## switch case to parse TM based on filetype
-                            if filetype == 44:
-                                parseFTRDatatoMasterCSV(binPacket,XMLmess,ftr_file_name)
-                                parseSingleScanFTR(binPacket, XMLmess, ScanFile)
-                                
+
+                elif(gzmatch): #if it is an unpacked binary file from the simulator
+
+                    InputFile = f
+                    fname = os.path.split(f)
+                    ScanFile = singlescan_dir + fname[1] + '.csv'  
+                    XMLmess = readXMLTHeader(InputFile, 2,FLOATS_log_file,HK_file_name) 
+                    filetype = XMLmess[0]
                     
-                            elif filetype == 33:
-                                parseEFUHKDatatoCSV(binPacket, EFU_HK_name)
-                                
-                            
-                            elif filetype == 22:
-                                parseTSENDatatoCSV(binPacket, EFU_file_name)
 
-def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir=default_local_target_dir, show_individual_file=True):
+                    with gzip.open(InputFile, "rb") as binary_file:
+
+                        #find binary section location in TM file
+                        bindata = binary_file.read()
+                        start = bindata.find(b'START') + 5  # Find the 'START' string that mark the start of the binary section
+                        end = bindata.find(b'END') # Find the 'END' string
+                        binPacket = (bindata[start:end-2]) # make a buffer containing only the binary section
+
+                        
+                        ## switch case to parse TM based on filetype
+                        if filetype == 44:
+                            parseFTRDatatoMasterCSV(binPacket,XMLmess,ftr_file_name)
+                            parseSingleScanFTR(binPacket, XMLmess, ScanFile)
+                            
+                
+                        elif filetype == 33:
+                            parseEFUHKDatatoCSV(binPacket, EFU_HK_name)
+                            
+                        
+                        elif filetype == 22:
+                            parseTSENDatatoCSV(binPacket, EFU_file_name)
+
+def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True):
 
 
    """
@@ -170,7 +166,7 @@ def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir=default_local_t
    """
 
 
-
+   ccmz_url="sshstr2.ipsl.polytechnique.fr"
 
 
    print('---------------------------------')
@@ -207,7 +203,7 @@ def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir=default_local_t
 
    try:
 
-
+       print(ccmz_user,ccmz_pass,ccmz_url)
        with pysftp.Connection(host=ccmz_url, username=ccmz_user, password=ccmz_pass) as sftp:
 
 
@@ -246,17 +242,13 @@ def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir=default_local_t
 
           local_filenames=[os.path.basename(f) for f in local_files] # filenames without
 
-
-
-
-
           # Get file list from the CCMz directory with file attributes
 
 
           ccmz_file_list = sftp.listdir_attr()
 
 
-
+    
 
 
           # check wether CCMz files need to be downloaded
@@ -445,7 +437,7 @@ def parseEFUHKDatatoCSV(binData, OutFile):
     ###note that the csv.sniffer raises an error if the csv file is created but blank   
     
     # open CSV file to make sure the header exists
-    file_exists = exists(EFU_HK_name)
+    file_exists = exists(OutFile)
     headerexists = 0
 
     if file_exists: 
@@ -489,12 +481,12 @@ def parseTSENDatatoCSV(binData, OutFile):
     ###note that the csv.sniffer raises an error if the csv file is created but blank   
     
     # open CSV file to make sure the header exists
-    file_exists = exists(EFU_file_name)
+    file_exists = exists(OutFile)
     headerexists = 0
 
     if file_exists: 
         sniff = csv.Sniffer() 
-        headerexists = sniff.has_header(open(EFU_file_name).read(2))   
+        headerexists = sniff.has_header(open(OutFile).read(2))   
     
     with open(OutFile, mode='a+') as out_file:
         file_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -616,7 +608,7 @@ def parseSingleScanFTR(binData, xml, OutFile):
 def parseFTRDatatoMasterCSV(binData, xml, OutFile):    
 
      # open CSV file to make sure the header exists
-    file_exists = exists(ftr_file_name)
+    file_exists = exists(OutFile)
     headerexists = 0
 
     if file_exists: 
@@ -729,13 +721,27 @@ def TSENCalVal(T_counts):
     T=(1.0/(a0+a1*log(R)+a2*(log(R)**2)+a3*(log(R)**3)+a4*(log(R)**4)+a5*(log(R)**5)))-273.15
     return T
 
-def main():
+def main(argv):
+  #This is the .yaml configuration file - contains CCMz login info and a list of flight/instruments to process, as well as the paths for file output
+  #The default config file is called FLOATS.yaml and is assume to be in the same directory as GetFLOATS_NoUser.py
+  configfile = 'FLOATS.yaml'
+  try:
+      opts, args = getopt.getopt(argv,"hc:",["configfile="])
+  except getopt.GetoptError:
+      print('GetFLOATS.py -c <configfile>')
+      sys.exit(2)
+  for opt, arg in opts:
+      if opt == '-h':
+         print('GetFLOATS.py -c <configfile>')
+         sys.exit()
+      elif opt in ("-c", "--configfile"):
+         configfile = arg
 
-    ##To add: mirror and download CCMz data
-
-    loop_over_flights_and_instruments()
-
-
-if __name__ == "__main__": 
-  # calling main function 
-  main() 
+  try:
+      with open(configfile, "r") as yamlfile:
+          config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+      loop_over_flights_and_instruments(config)
+  except OSError:
+      print('cannot open',configfile)
+if __name__ == "__main__":
+    main(sys.argv[1:])
