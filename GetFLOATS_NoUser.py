@@ -745,7 +745,7 @@ def main(argv):
   try:
       with open(configfile, "r") as yamlfile:
           config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-      loop_over_flights_and_instruments(config,processall=True)
+      loop_over_flights_and_instruments(config,processall=False)
   except OSError:
       print('cannot open',configfile)
 if __name__ == "__main__":
