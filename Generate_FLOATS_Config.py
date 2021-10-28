@@ -9,7 +9,7 @@ Created on Mon Oct 18 13:40:55 2021
 import yaml
 
 #The path to the output yaml file
-yamlfilename='/Users/sdavis/sd-data/projects/strateole2/C1/code/FLOATS.yaml'
+yamlfilename='/Users/sdavis/sd-data/projects/strateole2/C1/code/FLOATS_FileMaker/FLOATS.yaml'
 
 
 config = {}
