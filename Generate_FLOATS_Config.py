@@ -9,7 +9,7 @@ Created on Mon Oct 18 13:40:55 2021
 import yaml
 
 #The path to the output yaml file
-yamlfilename='/Users/sdavis/sd-data/projects/strateole2/C1/code/FLOATS_FileMaker/FLOATS.yaml'
+yamlfilename='/Users/sdavis/sd-data/projects/strateole2/C1/code/FLOATS.yaml'
 
 
 config = {}
@@ -21,7 +21,8 @@ config['local_target_dir']="/Users/sdavis/sd-data/projects/strateole2/C1/CCMZ_Mi
 
 
 floatsc151= {}
-FLOATS_csv_dir = "/Users/sdavis/sd-data/projects/strateole2/C1/ST2_C1_01_TTL5" # dir where to put processesed csv files 
+floatsc151['FlightID'] = 'ST2_C1_06_TTL5'
+FLOATS_csv_dir = "/Users/sdavis/sd-data/projects/strateole2/C1/ST2_C1_06_TTL5" # dir where to put processesed csv files 
 floatsc151['singlescan_dir'] = FLOATS_csv_dir+"/Single_FTR"
 floatsc151['FLOATS_log_file'] = FLOATS_csv_dir+"/FLOATS_Log.txt" #file to save log of XML messages
 floatsc151['ftr_file_name'] = FLOATS_csv_dir+"/FLOATS_Raman_Master.csv"
@@ -31,7 +32,6 @@ floatsc151['EFU_HK_name'] = FLOATS_csv_dir+"/FLOATS_EFU_HK.csv"
 
 floatsc151['flight_or_test']='Flight'
 floatsc151['instrument'] = 'FLOATS'
-floatsc151['FlightID'] = 'ST2_C1_01_TTL5'
 
 # floatsc152= {}
 # FLOATS_csv_dir = "/Users/sdavis/sd-data/projects/strateole2/C1/FLOATS_C1_52" # dir where to put processesed csv files 

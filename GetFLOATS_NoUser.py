@@ -26,6 +26,7 @@ import yaml
 import sys
 import getopt
 import pandas as pd
+import pathlib
 
 #from EFU_HKfileprocessor import *
 
@@ -77,12 +78,20 @@ def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
 
         if new_files != None:
             
+            #Make the output directories here if they don't exist
+            pathlib.Path(os.path.dirname(EFU_HK_name)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(EFU_file_name)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(FLOATS_log_file)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(HK_file_name)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(ftr_file_name)).mkdir(parents=True,exist_ok=True)       
+            pathlib.Path(singlescan_dir).mkdir(parents=True,exist_ok=True)
             # If we are updating the files we need to clobber all of the csv because the routines below only append to the files
-            os.remove(EFU_HK_name)
-            os.remove(EFU_file_name)
-            os.remove(FLOATS_log_file)
-            os.remove(HK_file_name)
-            os.remove(ftr_file_name)
+            pathlib.Path(EFU_HK_name).unlink(missing_ok=True)
+            pathlib.Path(EFU_file_name).unlink(missing_ok=True)
+            pathlib.Path(FLOATS_log_file).unlink(missing_ok=True)
+            pathlib.Path(HK_file_name).unlink(missing_ok=True)
+            pathlib.Path(ftr_file_name).unlink(missing_ok=True)
+            print('1')
 
             #for f in gzfiles:
             for f in new_files:
