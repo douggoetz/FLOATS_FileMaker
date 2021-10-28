@@ -25,16 +25,17 @@ from os.path import exists
 import yaml
 import sys
 import getopt
+import pandas as pd
+import pathlib
 
 #from EFU_HKfileprocessor import *
 
-#gzfiles = sorted(os.listdir(default_local_target_dir))
 
 #These are constants indicating the type of data files to sync from CCMz
 tm_or_tc='TM'
 raw_or_processed='Processed'
 
-def loop_over_flights_and_instruments(config):
+def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
 
     """
     Get all data from CCMz for the input list of flights/instruments
@@ -63,33 +64,51 @@ def loop_over_flights_and_instruments(config):
 
         ccmz_folder=os.path.join(flight,instrument,flight_or_test,tm_or_tc,raw_or_processed)
 
-
-        #mirror_ccmz_folder(ccmz_folder)
-
-
-        new_files = mirror_ccmz_folder(instrument,ccmz_folder,local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True)
-
+        if syncCCMz:
+            new_files = mirror_ccmz_folder(instrument,ccmz_folder,local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True)
+        else:
+            new_files=[]
+    
+        #If we want to process all of the files (not just the newest ones that were downloaded)
+        if processall:
+            print('Attempting to process all dat.gz files in ' + os.path.join(local_target_dir,ccmz_folder,'*.dat.gz'))
+            new_files=glob.glob(os.path.join(local_target_dir,ccmz_folder,'*.dat.gz')) 
+        
+        print(new_files)
 
         if new_files != None:
             
+            #Make the output directories here if they don't exist
+            pathlib.Path(os.path.dirname(EFU_HK_name)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(EFU_file_name)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(FLOATS_log_file)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(HK_file_name)).mkdir(parents=True,exist_ok=True)
+            pathlib.Path(os.path.dirname(ftr_file_name)).mkdir(parents=True,exist_ok=True)       
+            pathlib.Path(singlescan_dir).mkdir(parents=True,exist_ok=True)
+            # If we are updating the files we need to clobber all of the csv because the routines below only append to the files
+            pathlib.Path(EFU_HK_name).unlink(missing_ok=True)
+            pathlib.Path(EFU_file_name).unlink(missing_ok=True)
+            pathlib.Path(FLOATS_log_file).unlink(missing_ok=True)
+            pathlib.Path(HK_file_name).unlink(missing_ok=True)
+            pathlib.Path(ftr_file_name).unlink(missing_ok=True)
+            print('1')
 
             #for f in gzfiles:
             for f in new_files:
-    
                 simmatch = (re.search('.ready_tm', f))  ## use with OBC simulator unpacked data
                 gzmatch = (re.search('.gz', f))
                 
                 if(simmatch): #if it is an unpacked binary file from the simulator
-                
+                    print('parsing unpacked binary: ' + f)
                     InputFile = f
                     fname = os.path.split(f)
-                    ScanFile = singlescan_dir + fname[1] + '.csv'  
+                    ScanFile = os.path.join(singlescan_dir,fname[1]+'.csv')
                     fname = os.path.split(f)
                     XMLmess = readXMLTHeader(InputFile, 1,FLOATS_log_file,HK_file_name) 
                     filetype = XMLmess[0]
                     
                     with open(InputFile, "rb") as binary_file:
-
+                        
                         #find binary section location in TM file
                         bindata = binary_file.read()
                         start = bindata.find(b'START') + 5  # Find the 'START' string that mark the start of the binary section
@@ -112,10 +131,10 @@ def loop_over_flights_and_instruments(config):
                             
 
                 elif(gzmatch): #if it is an unpacked binary file from the simulator
-
+                    print('parsing gz file:' + f)
                     InputFile = f
                     fname = os.path.split(f)
-                    ScanFile = singlescan_dir + fname[1] + '.csv'  
+                    ScanFile = os.path.join(singlescan_dir,fname[1]+'.csv')
                     XMLmess = readXMLTHeader(InputFile, 2,FLOATS_log_file,HK_file_name) 
                     filetype = XMLmess[0]
                     
@@ -141,6 +160,24 @@ def loop_over_flights_and_instruments(config):
                         
                         elif filetype == 22:
                             parseTSENDatatoCSV(binPacket, EFU_file_name)
+
+            #Convert the csv files to html files that can be uploaded to the strat2.org webpage               
+            df = pd.read_csv(EFU_HK_name,skiprows=1)
+            sorted_df = df.sort_values(by=['Time POSIX'],ascending=False)
+            sorted_df.to_html( open(os.path.splitext(EFU_HK_name)[0]+'.html', 'w') )
+
+            df = pd.read_csv(EFU_file_name,skiprows=1)
+            sorted_df = df.sort_values(by=['Time POSIX'],ascending=False)
+            sorted_df.to_html( open(os.path.splitext(EFU_file_name)[0]+'.html', 'w') )
+
+            df = pd.read_csv(HK_file_name)
+            sorted_df = df.sort_values(by=['Time UNIX'],ascending=False)
+            sorted_df.to_html( open(os.path.splitext(HK_file_name)[0]+'.html', 'w') )
+
+            # floats_raman_master didn't look good when converted to html, so im commenting out for now
+            # df = pd.read_csv(ftr_file_name,header=[0,1,2])
+            # sorted_df = df.sort_values(df.columns[0],ascending=False)
+            # sorted_df.to_html( open(os.path.splitext(ftr_file_name)[0]+'.html', 'w') )            
 
 def mirror_ccmz_folder(instrument, ccmz_folder, local_target_dir, ccmz_user, ccmz_pass, show_individual_file=True):
 
@@ -737,10 +774,11 @@ def main(argv):
       elif opt in ("-c", "--configfile"):
          configfile = arg
 
+  print('Running with configuration file ' + configfile)
   try:
       with open(configfile, "r") as yamlfile:
           config = yaml.load(yamlfile, Loader=yaml.FullLoader)
-      loop_over_flights_and_instruments(config)
+      loop_over_flights_and_instruments(config,processall=True)
   except OSError:
       print('cannot open',configfile)
 if __name__ == "__main__":
