@@ -86,12 +86,12 @@ def loop_over_flights_and_instruments(config,syncCCMz=True, processall=False):
             pathlib.Path(os.path.dirname(ftr_file_name)).mkdir(parents=True,exist_ok=True)       
             pathlib.Path(singlescan_dir).mkdir(parents=True,exist_ok=True)
             # If we are updating the files we need to clobber all of the csv because the routines below only append to the files
-            pathlib.Path(EFU_HK_name).unlink(missing_ok=True)
-            pathlib.Path(EFU_file_name).unlink(missing_ok=True)
-            pathlib.Path(FLOATS_log_file).unlink(missing_ok=True)
-            pathlib.Path(HK_file_name).unlink(missing_ok=True)
-            pathlib.Path(ftr_file_name).unlink(missing_ok=True)
-            print('1')
+            if processall:
+                pathlib.Path(EFU_HK_name).unlink(missing_ok=True)
+                pathlib.Path(EFU_file_name).unlink(missing_ok=True)
+                pathlib.Path(FLOATS_log_file).unlink(missing_ok=True)
+                pathlib.Path(HK_file_name).unlink(missing_ok=True)
+                pathlib.Path(ftr_file_name).unlink(missing_ok=True)
 
             #for f in gzfiles:
             for f in new_files:
